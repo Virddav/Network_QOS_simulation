@@ -29,10 +29,11 @@ class Noeud:
         return self.numero
 
     def show_table(self):
-        print(f"Table de routage du noeud {self.numero}:")
-        for destination, info in self.table.items():
-            print(f"Destination: {destination}, Bande passante: {info['bande_passante']}")
-        print("-----------------\n")
+        if self.bordure==True:
+            print(f"Table de routage du noeud {self.numero}:")
+            for destination, info in self.table.items():
+                print(f"Destination: {destination}, Bande passante: {info['bande_passante']}")
+            print("-----------------\n")
 
 
 class Djikstra:
@@ -91,7 +92,7 @@ class Djikstra:
     
     def remplir_table(self, source: Noeud):
         for destination in self.list_noeud:
-            if source.numero != destination.numero: 
+            if source.numero != destination.numero and source.bordure==True: 
                 self.search_path(source.numero, destination.numero)
 
     
