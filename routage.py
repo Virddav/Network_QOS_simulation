@@ -33,10 +33,11 @@ class Djikstra:
         self.graph = nx.Graph()
         self.file_name = file_name
         self.nombre_noeuds = nombre_noeuds
-        self.randomize = randomize  # Option pour le mode aléatoire
+        self.randomize = randomize
+        self.initial_bandwidths = {}  # Nouveau dictionnaire pour stocker la bande passante initiale
 
     def set_noeud(self):
-        if self.file_name:  # Si un fichier est fourni
+        if self.file_name:  
             with open(self.file_name, 'r') as fichier:
                 size = int(fichier.readline().strip())
 
@@ -55,7 +56,7 @@ class Djikstra:
                             poids = random.randint(500, 10000)
 
                             self.list_noeud[numero_noeud].liaison_directe([(self.list_noeud[voisin_num], poids)])
-        elif self.randomize:  # Si on génère aléatoirement les voisins
+        elif self.randomize:  
             for i in range(self.nombre_noeuds):
                 self.list_noeud.append(Noeud(i))
 
@@ -70,6 +71,10 @@ class Djikstra:
             self.graph.add_node(noeud.numero)
             for voisin, bande_passante in noeud.list_voisins:
                 self.graph.add_edge(noeud.numero, voisin.numero, weight=bande_passante)
+                
+                # Stocker la bande passante initiale pour chaque arête
+                self.initial_bandwidths[(noeud.numero, voisin.numero)] = bande_passante
+                self.initial_bandwidths[(voisin.numero, noeud.numero)] = bande_passante
 
     def show_state(self):
         for elem in self.list_noeud:
@@ -78,7 +83,7 @@ class Djikstra:
     def search_path(self, source: int, destination: int, bande_passante_minimale: int):
         bandes_passantes = {noeud.numero: float('-inf') for noeud in self.list_noeud}
         predecessors = {noeud.numero: None for noeud in self.list_noeud}
-        bandes_passantes[source] = float('inf')  
+        bandes_passantes[source] = float('inf')
 
         non_visites = set(noeud.numero for noeud in self.list_noeud)
 
@@ -91,12 +96,13 @@ class Djikstra:
 
             for voisin, bande_passante in self.list_noeud[u].list_voisins:
                 if voisin.numero in non_visites:
-                    nouvelle_bande_passante = min(bandes_passantes[u], bande_passante)
+                    # Utiliser la bande passante restante au lieu de la bande passante initiale
+                    bande_restante = self.graph[u][voisin.numero]['weight']
+                    nouvelle_bande_passante = min(bandes_passantes[u], bande_restante)
                     if nouvelle_bande_passante > bandes_passantes[voisin.numero]:
                         bandes_passantes[voisin.numero] = nouvelle_bande_passante
                         predecessors[voisin.numero] = u
-                    print(f"Exploration de l'arête ({u}, {voisin.numero}) : bande passante actuelle = {bande_passante}, bande passante minimale = {nouvelle_bande_passante}")
-   
+                    print(f"Exploration de l'arête ({u}, {voisin.numero}) : bande passante actuelle = {bande_restante}, bande passante minimale = {nouvelle_bande_passante}")
 
         chemin = []
         noeud_actuel = destination
@@ -117,13 +123,9 @@ class Djikstra:
                 for i in range(len(chemin) - 1):
                     u = chemin[i]
                     v = chemin[i + 1]
-                    for voisin, poids in self.list_noeud[u].list_voisins:
-                        if voisin.numero == v:
-                            nouvelle_bande_passante = poids - bande_passante_minimale
-                            nouvelle_bande_passante = max(nouvelle_bande_passante, 0)
-                            self.update_bande_passante(u, v, nouvelle_bande_passante)
-                            print(f"Nouvelle bande passante pour l'edge ({u}, {v}): {nouvelle_bande_passante}")
-                            break
+                    # Soustraire la bande passante minimale requise de la bande passante restante
+                    nouvelle_bande_passante = max(self.graph[u][v]['weight'] - bande_passante_minimale, 0)
+                    self.update_bande_passante(u, v, nouvelle_bande_passante)
 
                 return chemin
             else:
@@ -136,20 +138,18 @@ class Djikstra:
         for index, (voisin, poids) in enumerate(self.list_noeud[u].list_voisins):
             if voisin.numero == v:
                 self.list_noeud[u].list_voisins[index] = (voisin, nouvelle_bande_passante)
-            break
+                break
             
         for index, (voisin, poids) in enumerate(self.list_noeud[v].list_voisins):
             if voisin.numero == u:
                 self.list_noeud[v].list_voisins[index] = (self.list_noeud[u], nouvelle_bande_passante)
-            break
+                break
 
         self.update_graph_networkx(u, v, nouvelle_bande_passante)
 
     def update_graph_networkx(self, u, v, nouvelle_bande_passante):
         if self.graph.has_edge(u, v):
-
             self.graph[u][v]['weight'] = nouvelle_bande_passante
-
 
     def visualiser_graphe(self, chemin):
         plt.figure()
@@ -175,7 +175,6 @@ class Djikstra:
 
         plt.show(block=False)
 
-
     def save_to_file(self, file_name):
         with open(file_name, 'w') as fichier:
             fichier.write(f"{len(self.list_noeud)}\n")  
@@ -184,8 +183,6 @@ class Djikstra:
                 for voisin, poids in noeud.list_voisins:
                     fichier.write(f"({voisin.numero},{poids}) ")
                 fichier.write("\n")
-
-    
 
 if __name__ == "__main__":
     mode = sys.argv[1]
