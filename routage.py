@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import sys
 import copy
-
+from ordonnacement_Fcfs import OrdonnancementFCFS
 class Noeud:
     def __init__(self, numero: int):
         self.nombre_voisins = 0
@@ -35,6 +35,7 @@ class Djikstra:
         self.nombre_noeuds = nombre_noeuds
         self.randomize = randomize
         self.initial_bandwidths = {}  # Nouveau dictionnaire pour stocker la bande passante initiale
+        self.ordonnancement = OrdonnancementFCFS()
 
     def set_noeud(self):
         if self.file_name:  
@@ -207,7 +208,11 @@ if __name__ == "__main__":
         destination = int(input("Entrez le noeud destination: "))
         bande_passante_minimale = int(input("Entrez la bande passante minimale requise: "))
         chemin = d.search_path(source, destination, bande_passante_minimale)
-        if chemin:
-            visualisation = input("Voulez-vous visualiser le chemin sur le graphe? (O/N): ").strip().lower()
-            if visualisation == 'o':
-                d.visualiser_graphe(chemin)
+        d.ordonnancement.ajouter_demande(source, destination, bande_passante_minimale)
+       # if chemin:
+        #    visualisation = input("Voulez-vous visualiser le chemin sur le graphe? (O/N): ").strip().lower()
+         #   if visualisation == 'o':
+          #      d.visualiser_graphe(chemin)
+        traiter = input("Voulez-vous traiter toutes les demandes dans la file d'attente? (O/N): ").strip().lower()
+        if traiter == 'o':
+            d.ordonnancement.traiter_demandes(d)
