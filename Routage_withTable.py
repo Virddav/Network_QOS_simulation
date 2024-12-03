@@ -2,6 +2,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import argparse
 import random
+import time
+
 
 class Noeud:
     def __init__(self, numero: int):
@@ -27,6 +29,7 @@ class Noeud:
 
     def get_numero(self):
         return self.numero
+    
 
     def show_table(self):
         if self.bordure==True:
@@ -34,6 +37,9 @@ class Noeud:
             for destination, info in self.table.items():
                 print(f"Destination: {destination}, Bande passante: {info['bande_passante']}")
             print("-----------------\n")
+
+    
+
 
 
 class Djikstra:
@@ -132,16 +138,74 @@ class Djikstra:
             print(f"Aucun chemin trouvé de {source} à {destination}")
             return None, []
 
-        print(f"Le chemin avec la bande passante maximale de {source} à {destination} est: {chemin}")
-        print(f"Bande passante minimale sur ce chemin: {bandes_passantes[destination]}")
         
         self.list_noeud[source].table[destination] = {
+            'chemin' : chemin,
             'bande_passante': bandes_passantes[destination]
         }
 
-        
-
         return bandes_passantes[destination], chemin
+
+    def get_table_data(self, number: int):
+        for destination, data in self.list_noeud[number].table.items():
+            print(f"Destination: {destination}")
+            print(f"Bande passante: {data['bande_passante']}")
+            print(f"Chemin: {data['chemin']}")
+            print("-----------------")
+
+
+    def controle_admission(self):
+        routeur_source = None
+        routeur_destination = None
+        choix = None
+        affichage = False
+        bande_demande = None
+        print("Voulez vous un affichage graphique des résultats n/y?")
+        choix = input("n/y")
+        if choix=='y':
+            affichage=True
+        else:
+            affichage = False
+        while True:
+            routeur_source = int(input("Entrez le routeur source de l'emission "))
+            if not self.list_noeud[routeur_source].bordure:
+                break
+            routeur_destination = int(input("Entrez le routeur destination "))
+            bande_demande = int(input("Entrez la bande passante demande"))
+            bande_path , chemin = self.search_path(routeur_source , routeur_destination)
+            print(f"La bande passante maximale du chemin est de {bande_path} avec le chemin {chemin}")
+            self.get_table_data(routeur_source)
+            if bande_demande > bande_path:
+                print(f"Aucun chemin trouve , la bande passante maximale sur ce chemin est de {bande_path}")
+            if bande_demande <= bande_path:
+                print("Chemin accepte")
+                for i in range(len(chemin)-1) :
+                    for voisin, poids in self.list_noeud[chemin[i]].list_voisins:
+                        if voisin.numero == chemin[i + 1]:
+                            if poids >= bande_demande:
+                                for idx, (voisin2, poids2) in enumerate(self.list_noeud[chemin[i]].list_voisins):
+                                    if voisin2.numero == chemin[i + 1]:
+                                        self.list_noeud[chemin[i]].list_voisins[idx] = (voisin2, poids2 - bande_demande)
+                                        break
+
+                                self.graph[chemin[i]][chemin[i + 1]]['weight'] -= bande_demande
+                                print(f"La bande passante a été réduite à {poids - bande_demande} pour le lien entre {chemin[i]} et {chemin[i+1]}")
+                            else:
+                                print(f"La bande passante demandée est supérieure à celle du lien. La bande passante du lien est de {poids}.")
+
+                            break  
+                    else:
+                        print(f"Aucun voisin ne mène de {chemin[i]} à {chemin[i+1]}")
+
+            if chemin and affichage:
+                self.visualiser_graphe(chemin)
+                time.sleep(2)
+            else:
+                continue
+
+
+
+
 
     def show_state(self):
         for elem in self.list_noeud:
@@ -159,6 +223,8 @@ class Djikstra:
         nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
 
         plt.show()
+        
+
 
 
 def main():
@@ -180,7 +246,7 @@ def main():
         
         d = Djikstra(args.file)
         d.set_noeud(aleatoire=None, file=args.file)
-        d.show_state()
+        """d.show_state()
         bande, chemin = d.search_path(args.source, args.destination)
         for elem in range(len(d.list_noeud)):
             d.list_noeud[elem].show_table()
@@ -189,6 +255,8 @@ def main():
             d.visualiser_graphe(chemin)
         else:
             print("Aucun chemin valide trouvé. Le graphe ne sera pas affiché.")
+        """
+        d.controle_admission()
 
     elif args.random:
         d = Djikstra(file_name=None)
